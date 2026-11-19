@@ -1,0 +1,136 @@
+@startuml
+
+class roles {
+ + id : Uuid
+ + name : String
+}
+
+class employees {
+ + id : Uuid
+ + name : String
+ + surname : String
+ + cpf : String
+ + login : String
+ + password_hash : String
+ + email : String
+ + phone : String
+ + role_id : Uuid
+ + created_at : LocalDateTime
+ + updated_at : LocalDateTime
+ + deleted_at : LocalDateTime
+}
+
+class clients {
+ + id : Uuid
+ + name : String
+ + surname : String
+ + cpf : String
+ + login : String
+ + password_hash : String
+ + email : String
+ + phone : String
+ }
+
+class address {
+ + id : Uuid
+ + zip_code : String
+ + street : String
+ + number : String
+ + neighborhood : String
+ + city : String
+ + state : String
+ + complement : String
+ + address_type : Uuid
+ + is_main : Boolean
+ + client_id : Uuid
+}
+
+class orders {
+ + id : Uuid
+ + name : String
+ + order_type : String
+ + order_status_id : Uuid
+ + client_id : Uuid
+ + address_id : Uuid
+ }
+
+class order_status {
+ + id : Uuid
+ + name : String
+}
+
+class materials {
+ + id : Uuid
+ + name : String
+ + cost_by_weight : BigDecimal
+}
+
+class services {
+ + id : Uuid
+ + name : String
+ + cost_by_hour : BigDecimal
+}
+
+class energy {
+ + id : Uuid
+ + cost_by_kWh : BigDecimal
+}
+
+class platform {
+ + id : Uuid
+ + cost : BigDecimal
+}
+
+class order_cost_by_energy {
+ + id : Uuid
+ + order_id : Uuid
+ + energy_id : Uuid
+ }
+
+class order_cost_by_material {
+ + id : Uuid
+ + order_id : Uuid
+ + material_id : Uuid
+ }
+
+class order_cost_by_service {
+ + id : Uuid
+ + time_of_service : LocalDateTime
+ + order_id : Uuid
+ + service_id : Uuid
+ }
+
+class order_cost_by_platform {
+ + id : Uuid
+ + order_id : Uuid
+ + platform_id : Uuid
+ }
+
+ ' Employees role
+roles "1" -- "0..*" employees : role_id
+
+' Client address
+clients "1" -- "0..*" address : client_id
+
+' Order status
+order_status "1" -- "0..*" orders : order_status_id
+
+' Client order
+clients "1" -- "0..*" orders : client_id
+
+' Cost by energy
+orders "1" -- "0..*" order_cost_by_energy : order_id
+energy "1" -- "0..*" order_cost_by_energy : energy_id
+
+' Cost by material
+orders "1" -- "0..*" order_cost_by_material : order_id
+materials "1" -- "0..*" order_cost_by_material : material_id
+
+' Cost by platform
+orders "1" -- "0..*" order_cost_by_platform : order_id
+platform "1" -- "0..*" order_cost_by_platform : platform_id
+
+' Cost by service
+orders "1" -- "0..*" order_cost_by_service : order_id
+services "1" -- "0..*" order_cost_by_service : service_id
+@enduml
