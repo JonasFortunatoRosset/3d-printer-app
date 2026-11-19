@@ -5,7 +5,7 @@ class roles {
  + name : String
 }
 
-class employees {
+class users {
  + id : Uuid
  + name : String
  + surname : String
@@ -22,14 +22,13 @@ class employees {
 
 class clients {
  + id : Uuid
- + name : String
- + surname : String
- + cpf : String
- + login : String
- + password_hash : String
- + email : String
- + phone : String
- }
+ + user_id : Uuid
+}
+
+class employees {
+ + id : Uuid
+ + user_id : Uuid
+}
 
 class address {
  + id : Uuid
@@ -51,6 +50,7 @@ class orders {
  + order_type : String
  + order_status_id : Uuid
  + client_id : Uuid
+ + employee_id : Uuid
  + address_id : Uuid
  }
 
@@ -106,8 +106,8 @@ class order_cost_by_platform {
  + platform_id : Uuid
  }
 
- ' Employees role
-roles "1" -- "0..*" employees : role_id
+ ' User role
+roles "1" -- "0..*" users : role_id
 
 ' Client address
 clients "1" -- "0..*" address : client_id
@@ -117,6 +117,9 @@ order_status "1" -- "0..*" orders : order_status_id
 
 ' Client order
 clients "1" -- "0..*" orders : client_id
+
+' Empoyee order
+employees "1" -- "0..*" orders : employee_id
 
 ' Cost by energy
 orders "1" -- "0..*" order_cost_by_energy : order_id
