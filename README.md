@@ -6,3 +6,4 @@ Este projeto consiste no desenvolvimento de uma API backend para um sistema empr
 ### Integrantes
 João Vitor Da Silva Miguel - [João Vitor Da Silva Miguel](https://github.com/joaovitor2006tecnicoti)<br>
 Jonas Fortunato Rosset - [Jonas Fortunato Rosset](https://github.com/JonasFortunatoRosset)<br>
+Leonardo Ribeiro Kulkamp - [Leonardo Ribeiro Kulkamp](https://github.com/LeonardoRibeiroKulkamp)<br>
