@@ -16,18 +16,16 @@ public interface MaterialRepository extends JpaRepository<Material, UUID> {
 
     @Query("""
             select m from Material m
-            where lower(m.name) like lower(concat('%', :nome, '%'))
-              and (:tipo is null or m.type = :tipo)
-              and (:ativo is null or m.active = :ativo)
+            where lower(m.name) like lower(concat('%', :name, '%'))
+              and (:type is null or m.type = :type)
+              and (:active is null or m.active = :active)
             """)
-    Page<Material> filtrar(@Param("nome") String nome,
-                           @Param("tipo") MaterialType tipo,
-                           @Param("ativo") Boolean ativo,
-                           Pageable paginacao);
+    Page<Material> search(@Param("name") String name,
+                          @Param("type") MaterialType type,
+                          @Param("active") Boolean active,
+                          Pageable pageable);
 
-    @Query("select count(m) > 0 from Material m where lower(m.name) = lower(:nome)")
-    boolean existeNome(@Param("nome") String nome);
+    boolean existsByNameIgnoreCase(String name);
 
-    @Query("select count(m) > 0 from Material m where lower(m.name) = lower(:nome) and m.id <> :id")
-    boolean existeNomeEmOutroMaterial(@Param("nome") String nome, @Param("id") UUID id);
+    boolean existsByNameIgnoreCaseAndIdNot(String name, UUID id);
 }
