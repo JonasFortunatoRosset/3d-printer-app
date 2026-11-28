@@ -1,139 +1,151 @@
 @startuml
+skinparam classAttributeIconSize 0
+hide methods
 
-class roles {
- + id : Uuid
- + name : String
+enum Role {
+ ADMIN
+ EMPLOYEE
+ CLIENT
+}
+
+enum OrderStatus {
+ PENDING_QUOTE
+ QUOTED
+ APPROVED
+ IN_PRODUCTION
+ FINISHED
+ DELIVERED
+ CANCELED
+}
+
+enum AddressType {
+ RESIDENTIAL
+ COMMERCIAL
+}
+
+enum MaterialType {
+ PLA
+ ABS
+ PETG
+ TPU
+ RESIN
 }
 
 class users {
- + id : Uuid
+ + id : UUID
  + name : String
  + surname : String
- + cpf : String
- + login : String
+ + cpf : String <<unique>>
+ + email : String <<unique>>
  + password_hash : String
- + email : String
  + phone : String
- + role_id : Uuid
+ + role : Role
  + created_at : LocalDateTime
  + updated_at : LocalDateTime
  + deleted_at : LocalDateTime
 }
 
-class clients {
- + id : Uuid
- + user_id : Uuid
-}
-
-class employees {
- + id : Uuid
- + user_id : Uuid
-}
-
-class address {
- + id : Uuid
+class addresses {
+ + id : UUID
+ + user_id : UUID <<FK>>
  + zip_code : String
  + street : String
  + number : String
+ + complement : String
  + neighborhood : String
  + city : String
  + state : String
- + complement : String
- + address_type : Uuid
+ + address_type : AddressType
  + is_main : Boolean
- + client_id : Uuid
-}
-
-class orders {
- + id : Uuid
- + name : String
- + order_type : String
- + order_status_id : Uuid
- + client_id : Uuid
- + employee_id : Uuid
- + address_id : Uuid
- }
-
-class order_status {
- + id : Uuid
- + name : String
 }
 
 class materials {
- + id : Uuid
+ + id : UUID
  + name : String
- + cost_by_weight : BigDecimal
+ + type : MaterialType
+ + price_per_kg : BigDecimal
+ + active : Boolean
+}
+
+class printers {
+ + id : UUID
+ + name : String
+ + model : String
+ + power_watts : Integer
+ + cost_per_hour : BigDecimal
+ + active : Boolean
 }
 
 class services {
- + id : Uuid
+ + id : UUID
  + name : String
- + cost_by_hour : BigDecimal
+ + description : String
+ + price_per_hour : BigDecimal
+ + active : Boolean
 }
 
-class energy {
- + id : Uuid
- + cost_by_kWh : BigDecimal
+class energy_tariffs {
+ + id : UUID
+ + price_per_kwh : BigDecimal
+ + valid_from : LocalDate
 }
 
-class platform {
- + id : Uuid
- + cost : BigDecimal
+class orders {
+ + id : UUID
+ + title : String
+ + description : String
+ + status : OrderStatus
+ + client_id : UUID <<FK users>>
+ + employee_id : UUID <<FK users, nullable>>
+ + delivery_address_id : UUID <<FK>>
+ + energy_tariff_id : UUID <<FK>>
+ + total_amount : BigDecimal
+ + deadline : LocalDate
+ + created_at : LocalDateTime
+ + updated_at : LocalDateTime
 }
 
-class order_cost_by_energy {
- + id : Uuid
- + order_id : Uuid
- + energy_id : Uuid
- }
+class order_items {
+ + id : UUID
+ + order_id : UUID <<FK>>
+ + material_id : UUID <<FK>>
+ + printer_id : UUID <<FK>>
+ + description : String
+ + model_url : String
+ + weight_grams : BigDecimal
+ + print_time : Integer
+ + material_cost : BigDecimal
+ + energy_cost : BigDecimal
+ + printer_cost : BigDecimal
+ + subtotal : BigDecimal
+}
 
-class order_cost_by_material {
- + id : Uuid
- + order_id : Uuid
- + material_id : Uuid
- }
+class order_services {
+ + id : UUID
+ + order_id : UUID <<FK>>
+ + service_id : UUID <<FK>>
+ + hours : BigDecimal
+ + price_per_hour : BigDecimal
+ + subtotal : BigDecimal
+}
 
-class order_cost_by_service {
- + id : Uuid
- + time_of_service : LocalDateTime
- + order_id : Uuid
- + service_id : Uuid
- }
+' Endereços do usuário
+users "1" -- "0..*" addresses : user_id
 
-class order_cost_by_platform {
- + id : Uuid
- + order_id : Uuid
- + platform_id : Uuid
- }
+' Cliente e funcionário do pedido
+users "1" -- "0..*" orders : client_id
+users "0..1" -- "0..*" orders : employee_id
 
- ' User role
-roles "1" -- "0..*" users : role_id
+' Endereço de entrega e tarifa usada no pedido
+addresses "1" -- "0..*" orders : delivery_address_id
+energy_tariffs "1" -- "0..*" orders : energy_tariff_id
 
-' Client address
-clients "1" -- "0..*" address : client_id
+' Itens impressos do pedido
+orders "1" -- "1..*" order_items : order_id
+materials "1" -- "0..*" order_items : material_id
+printers "1" -- "0..*" order_items : printer_id
 
-' Order status
-order_status "1" -- "0..*" orders : order_status_id
-
-' Client order
-clients "1" -- "0..*" orders : client_id
-
-' Empoyee order
-employees "1" -- "0..*" orders : employee_id
-
-' Cost by energy
-orders "1" -- "0..*" order_cost_by_energy : order_id
-energy "1" -- "0..*" order_cost_by_energy : energy_id
-
-' Cost by material
-orders "1" -- "0..*" order_cost_by_material : order_id
-materials "1" -- "0..*" order_cost_by_material : material_id
-
-' Cost by platform
-orders "1" -- "0..*" order_cost_by_platform : order_id
-platform "1" -- "0..*" order_cost_by_platform : platform_id
-
-' Cost by service
-orders "1" -- "0..*" order_cost_by_service : order_id
-services "1" -- "0..*" order_cost_by_service : service_id
+' Serviços extras do pedido
+orders "1" -- "0..*" order_services : order_id
+services "1" -- "0..*" order_services : service_id
 @enduml
