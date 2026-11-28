@@ -1,10 +1,12 @@
 package br.com.bkd.apiprinterapp.service;
 
-import br.com.bkd.apiprinterapp.dto.material.request.MaterialRequest;
+import br.com.bkd.apiprinterapp.dto.material.request.CreateMaterialRequest;
+import br.com.bkd.apiprinterapp.dto.material.request.UpdateMaterialRequest;
+import br.com.bkd.apiprinterapp.dto.material.response.CreatedMaterialResponse;
 import br.com.bkd.apiprinterapp.dto.material.response.MaterialResponse;
 import br.com.bkd.apiprinterapp.enums.MaterialType;
-import br.com.bkd.apiprinterapp.exception.ConflitoException;
-import br.com.bkd.apiprinterapp.exception.RecursoNaoEncontradoException;
+import br.com.bkd.apiprinterapp.exception.ConflictException;
+import br.com.bkd.apiprinterapp.exception.ResourceNotFoundException;
 import br.com.bkd.apiprinterapp.mapper.MaterialMapper;
 import br.com.bkd.apiprinterapp.model.Material;
 import br.com.bkd.apiprinterapp.repository.MaterialRepository;
@@ -18,60 +20,60 @@ import java.util.UUID;
 @Service
 public class MaterialService {
 
-    private final MaterialRepository repositorioMaterial;
-    private final MaterialMapper mapeadorMaterial;
+    private final MaterialRepository materialRepository;
+    private final MaterialMapper materialMapper;
 
-    public MaterialService(MaterialRepository repositorioMaterial, MaterialMapper mapeadorMaterial) {
-        this.repositorioMaterial = repositorioMaterial;
-        this.mapeadorMaterial = mapeadorMaterial;
+    public MaterialService(MaterialRepository materialRepository, MaterialMapper materialMapper) {
+        this.materialRepository = materialRepository;
+        this.materialMapper = materialMapper;
     }
 
     @Transactional(readOnly = true)
-    public Page<MaterialResponse> listar(String nome, MaterialType tipo, Boolean ativo, Pageable paginacao) {
-        String filtroNome = nome == null ? "" : nome.trim();
-        return repositorioMaterial.filtrar(filtroNome, tipo, ativo, paginacao)
-                .map(mapeadorMaterial::paraResposta);
+    public Page<MaterialResponse> getAllMaterials(String name, MaterialType type, Boolean active, Pageable pageable) {
+        String nameFilter = name == null ? "" : name.trim();
+        return materialRepository.search(nameFilter, type, active, pageable)
+                .map(materialMapper::toResponse);
     }
 
     @Transactional(readOnly = true)
-    public MaterialResponse buscar(UUID id) {
-        return mapeadorMaterial.paraResposta(buscarEntidade(id));
+    public MaterialResponse getMaterialById(UUID id) {
+        return materialMapper.toResponse(findMaterialById(id));
     }
 
     @Transactional
-    public MaterialResponse criar(MaterialRequest dados) {
-        if (repositorioMaterial.existeNome(dados.name().trim())) {
-            throw new ConflitoException("Já existe um material com este nome");
+    public CreatedMaterialResponse createMaterial(CreateMaterialRequest materialDto) {
+        if (materialRepository.existsByNameIgnoreCase(materialDto.name().trim())) {
+            throw new ConflictException("Já existe um material com este nome");
         }
-        Material material = mapeadorMaterial.paraEntidade(dados);
-        return mapeadorMaterial.paraResposta(repositorioMaterial.save(material));
+        Material material = materialMapper.toEntity(materialDto);
+        return materialMapper.toCreatedResponse(materialRepository.save(material));
     }
 
     @Transactional
-    public MaterialResponse atualizar(UUID id, MaterialRequest dados) {
-        Material material = buscarEntidade(id);
+    public MaterialResponse updateMaterial(UUID id, UpdateMaterialRequest materialDto) {
+        Material material = findMaterialById(id);
 
-        if (repositorioMaterial.existeNomeEmOutroMaterial(dados.name().trim(), id)) {
-            throw new ConflitoException("Já existe um material com este nome");
+        if (materialRepository.existsByNameIgnoreCaseAndIdNot(materialDto.name().trim(), id)) {
+            throw new ConflictException("Já existe um material com este nome");
         }
 
-        material.setName(dados.name().trim());
-        material.setType(dados.type());
-        material.setPricePerKg(dados.pricePerKg());
-        if (dados.active() != null) {
-            material.setActive(dados.active());
+        material.setName(materialDto.name().trim());
+        material.setType(materialDto.type());
+        material.setPricePerKg(materialDto.pricePerKg());
+        if (materialDto.active() != null) {
+            material.setActive(materialDto.active());
         }
-        return mapeadorMaterial.paraResposta(repositorioMaterial.save(material));
+        return materialMapper.toResponse(materialRepository.save(material));
     }
 
     @Transactional
-    public void excluir(UUID id) {
-        Material material = buscarEntidade(id);
-        repositorioMaterial.delete(material);
+    public void deleteMaterial(UUID id) {
+        Material material = findMaterialById(id);
+        materialRepository.delete(material);
     }
 
-    private Material buscarEntidade(UUID id) {
-        return repositorioMaterial.findById(id)
-                .orElseThrow(() -> new RecursoNaoEncontradoException("Material", id));
+    private Material findMaterialById(UUID id) {
+        return materialRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Material", id));
     }
 }

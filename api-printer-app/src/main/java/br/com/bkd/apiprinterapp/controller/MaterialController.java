@@ -1,6 +1,8 @@
 package br.com.bkd.apiprinterapp.controller;
 
-import br.com.bkd.apiprinterapp.dto.material.request.MaterialRequest;
+import br.com.bkd.apiprinterapp.dto.material.request.CreateMaterialRequest;
+import br.com.bkd.apiprinterapp.dto.material.request.UpdateMaterialRequest;
+import br.com.bkd.apiprinterapp.dto.material.response.CreatedMaterialResponse;
 import br.com.bkd.apiprinterapp.dto.material.response.MaterialResponse;
 import br.com.bkd.apiprinterapp.enums.MaterialType;
 import br.com.bkd.apiprinterapp.service.MaterialService;
@@ -26,40 +28,40 @@ import java.util.UUID;
 @RequestMapping("/materials")
 public class MaterialController {
 
-    private final MaterialService servicoMaterial;
+    private final MaterialService materialService;
 
-    public MaterialController(MaterialService servicoMaterial) {
-        this.servicoMaterial = servicoMaterial;
+    public MaterialController(MaterialService materialService) {
+        this.materialService = materialService;
     }
 
     @GetMapping
-    public Page<MaterialResponse> listar(
-            @RequestParam(name = "name", required = false) String nome,
-            @RequestParam(name = "type", required = false) MaterialType tipo,
-            @RequestParam(name = "active", required = false) Boolean ativo,
-            @PageableDefault(size = 10, sort = "name") Pageable paginacao) {
-        return servicoMaterial.listar(nome, tipo, ativo, paginacao);
+    public Page<MaterialResponse> getAllMaterials(
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) MaterialType type,
+            @RequestParam(required = false) Boolean active,
+            @PageableDefault(size = 10, sort = "name") Pageable pageable) {
+        return materialService.getAllMaterials(name, type, active, pageable);
     }
 
     @GetMapping("/{id}")
-    public MaterialResponse buscar(@PathVariable UUID id) {
-        return servicoMaterial.buscar(id);
+    public MaterialResponse getMaterialById(@PathVariable UUID id) {
+        return materialService.getMaterialById(id);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public MaterialResponse criar(@RequestBody @Valid MaterialRequest dados) {
-        return servicoMaterial.criar(dados);
+    public CreatedMaterialResponse createMaterial(@RequestBody @Valid CreateMaterialRequest materialDto) {
+        return materialService.createMaterial(materialDto);
     }
 
     @PutMapping("/{id}")
-    public MaterialResponse atualizar(@PathVariable UUID id, @RequestBody @Valid MaterialRequest dados) {
-        return servicoMaterial.atualizar(id, dados);
+    public MaterialResponse updateMaterial(@PathVariable UUID id, @RequestBody @Valid UpdateMaterialRequest materialDto) {
+        return materialService.updateMaterial(id, materialDto);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void excluir(@PathVariable UUID id) {
-        servicoMaterial.excluir(id);
+    public void deleteMaterial(@PathVariable UUID id) {
+        materialService.deleteMaterial(id);
     }
 }

@@ -8,10 +8,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.ErrorResponse;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -22,63 +25,81 @@ public class ApiExceptionHandler {
     private static final Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ProblemDetail validacao(MethodArgumentNotValidException excecao) {
-        Map<String, String> erros = new LinkedHashMap<>();
-        excecao.getBindingResult().getFieldErrors().forEach(erro ->
-                erros.putIfAbsent(erro.getField(), erro.getDefaultMessage()));
+    public ProblemDetail handleValidation(MethodArgumentNotValidException exception) {
+        Map<String, String> errors = new LinkedHashMap<>();
+        exception.getBindingResult().getFieldErrors().forEach(error ->
+                errors.putIfAbsent(error.getField(), error.getDefaultMessage()));
 
-        ProblemDetail problema = criarProblema(HttpStatus.BAD_REQUEST, "Erro de validação",
+        ProblemDetail problem = buildProblem(HttpStatus.BAD_REQUEST, "Erro de validação",
                 "Um ou mais campos são inválidos");
-        problema.setProperty("errors", erros);
-        return problema;
+        problem.setProperty("errors", errors);
+        return problem;
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ProblemDetail corpoInvalido(HttpMessageNotReadableException excecao) {
-        return criarProblema(HttpStatus.BAD_REQUEST, "Requisição inválida",
+    public ProblemDetail handleUnreadableBody(HttpMessageNotReadableException exception) {
+        return buildProblem(HttpStatus.BAD_REQUEST, "Requisição inválida",
                 "O corpo da requisição está malformado ou contém valores inválidos");
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
-    public ProblemDetail parametroInvalido(MethodArgumentTypeMismatchException excecao) {
-        return criarProblema(HttpStatus.BAD_REQUEST, "Parâmetro inválido",
-                "Valor inválido para o parâmetro '" + excecao.getName() + "'");
+    public ProblemDetail handleTypeMismatch(MethodArgumentTypeMismatchException exception) {
+        return buildProblem(HttpStatus.BAD_REQUEST, "Parâmetro inválido",
+                "Valor inválido para o parâmetro '" + exception.getName() + "'");
     }
 
     @ExceptionHandler(InvalidDataAccessApiUsageException.class)
-    public ProblemDetail consultaInvalida(InvalidDataAccessApiUsageException excecao) {
-        return criarProblema(HttpStatus.BAD_REQUEST, "Consulta inválida",
+    public ProblemDetail handleInvalidQuery(InvalidDataAccessApiUsageException exception) {
+        return buildProblem(HttpStatus.BAD_REQUEST, "Consulta inválida",
                 "Parâmetros de consulta inválidos. Verifique o campo informado em 'sort'");
     }
 
-    @ExceptionHandler(RecursoNaoEncontradoException.class)
-    public ProblemDetail naoEncontrado(RecursoNaoEncontradoException excecao) {
-        return criarProblema(HttpStatus.NOT_FOUND, "Recurso não encontrado", excecao.getMessage());
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ProblemDetail handleResourceNotFound(ResourceNotFoundException exception) {
+        return buildProblem(HttpStatus.NOT_FOUND, "Recurso não encontrado", exception.getMessage());
     }
 
-    @ExceptionHandler(ConflitoException.class)
-    public ProblemDetail conflito(ConflitoException excecao) {
-        return criarProblema(HttpStatus.CONFLICT, "Conflito", excecao.getMessage());
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ProblemDetail handleRouteNotFound(NoResourceFoundException exception) {
+        return buildProblem(HttpStatus.NOT_FOUND, "Rota não encontrada", "A rota informada não existe");
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ProblemDetail handleMethodNotSupported(HttpRequestMethodNotSupportedException exception) {
+        return buildProblem(HttpStatus.METHOD_NOT_ALLOWED, "Método não suportado",
+                "O método " + exception.getMethod() + " não é suportado nesta rota");
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ProblemDetail handleMediaTypeNotSupported(HttpMediaTypeNotSupportedException exception) {
+        return buildProblem(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "Tipo de conteúdo não suportado",
+                "Envie o corpo da requisição no formato application/json");
+    }
+
+    @ExceptionHandler(ConflictException.class)
+    public ProblemDetail handleConflict(ConflictException exception) {
+        return buildProblem(HttpStatus.CONFLICT, "Conflito", exception.getMessage());
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
-    public ProblemDetail violacaoIntegridade(DataIntegrityViolationException excecao) {
-        return criarProblema(HttpStatus.CONFLICT, "Conflito de integridade",
+    public ProblemDetail handleDataIntegrityViolation(DataIntegrityViolationException exception) {
+        return buildProblem(HttpStatus.CONFLICT, "Conflito de integridade",
                 "A operação viola uma restrição do banco de dados");
     }
 
     @ExceptionHandler(Exception.class)
-    public ProblemDetail generico(Exception excecao) {
-        if (excecao instanceof ErrorResponse erroSpring) {
-            return erroSpring.getBody();
+    public ProblemDetail handleUnexpected(Exception exception) {
+        if (exception instanceof ErrorResponse errorResponse) {
+            return buildProblem(HttpStatus.valueOf(errorResponse.getStatusCode().value()), "Erro na requisição",
+                    "Não foi possível processar a requisição");
         }
-        log.error("Erro inesperado", excecao);
-        return criarProblema(HttpStatus.INTERNAL_SERVER_ERROR, "Erro interno", "Ocorreu um erro inesperado");
+        log.error("Unexpected error", exception);
+        return buildProblem(HttpStatus.INTERNAL_SERVER_ERROR, "Erro interno", "Ocorreu um erro inesperado");
     }
 
-    private ProblemDetail criarProblema(HttpStatus status, String titulo, String detalhe) {
-        ProblemDetail problema = ProblemDetail.forStatusAndDetail(status, detalhe);
-        problema.setTitle(titulo);
-        return problema;
+    private ProblemDetail buildProblem(HttpStatus status, String title, String detail) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, detail);
+        problem.setTitle(title);
+        return problem;
     }
 }
